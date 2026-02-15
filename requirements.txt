@@ -1,0 +1,8 @@
+torch
+numpy
+fastapi
+uvicorn
+pydantic
+datasets
+scikit-learn
+tqdm

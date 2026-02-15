@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>A4 Text Similarity (SBERT NLI)</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f6f7fb; margin:0; }
+    .wrap { max-width: 900px; margin: 28px auto; padding: 0 16px; }
+    .card { background:#fff; border:1px solid #e6e7ef; border-radius: 12px; padding: 18px; box-shadow: 0 4px 16px rgba(0,0,0,.05); }
+    h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .sub { margin: 0 0 18px 0; color:#444; line-height:1.4; }
+    label { display:block; font-weight:600; margin: 12px 0 6px; }
+    textarea { width:100%; min-height:92px; padding:10px; border:1px solid #cfd2e6; border-radius:10px; font-size:14px; resize:vertical; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
+    button {
+      padding: 10px 14px; border:0; border-radius: 10px; cursor:pointer;
+      background:#2d6cdf; color:#fff; font-weight:600;
+    }
+    button.secondary { background:#eef2ff; color:#2d3a67; border:1px solid #cfd2e6; }
+    button:disabled { opacity: .55; cursor:not-allowed; }
+    .out { margin-top:16px; padding:14px; border-radius:12px; border:1px solid #e6e7ef; background:#fbfbfe; }
+    .pill {
+      display:inline-block; padding: 6px 10px; border-radius: 999px; font-weight:700; font-size: 13px;
+      border: 1px solid #ddd;
+    }
+    .pill.entailment { background:#e9f7ef; border-color:#bfe8cd; color:#1e7b3a; }
+    .pill.neutral { background:#fff6e5; border-color:#ffe2a8; color:#8a5a00; }
+    .pill.contradiction { background:#fdecec; border-color:#f7b9b9; color:#b42318; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .kv { background:#fff; border:1px solid #e6e7ef; border-radius: 10px; padding: 10px; }
+    .kv b { display:block; margin-bottom: 6px; }
+    .small { color:#666; font-size: 13px; }
+    .footer { margin-top: 14px; color:#666; font-size: 13px; }
+    code { background:#eef2ff; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>A4 Text Similarity / NLI Web App</h1>
+      <p class="sub">
+        This web app uses a <b>custom-trained Sentence-BERT (SBERT)</b> model to predict Natural Language Inference (NLI):
+        <b>entailment</b>, <b>neutral</b>, or <b>contradiction</b>.
+      </p>
+
+      <!-- Requirement: two input boxes -->
+      <label for="premise">Premise</label>
+      <textarea id="premise" placeholder="Type premise sentence here...">A man is playing a guitar on stage.</textarea>
+
+      <label for="hypothesis">Hypothesis</label>
+      <textarea id="hypothesis" placeholder="Type hypothesis sentence here...">The man is performing music.</textarea>
+
+      <div class="row">
+        <button id="btnPredict" onclick="doPredict()">Predict NLI Label</button>
+        <button class="secondary" onclick="loadExample()">Load Example</button>
+        <button class="secondary" onclick="clearAll()">Clear</button>
+      </div>
+
+      <div class="out" id="output">
+        <div class="small">Click <b>Predict NLI Label</b> to see the model output.</div>
+        <div class="footer">
+          Backend endpoint: <code>POST /predict</code> at <code>http://127.0.0.1:8000</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "http://127.0.0.1:8000/predict";
+
+  function loadExample() {
+    document.getElementById("premise").value = "A man is playing a guitar on stage.";
+    document.getElementById("hypothesis").value = "The man is performing music.";
+    document.getElementById("output").innerHTML =
+      `<div class="small">Example loaded. Click <b>Predict NLI Label</b>.</div>`;
+  }
+
+  function clearAll() {
+    document.getElementById("premise").value = "";
+    document.getElementById("hypothesis").value = "";
+    document.getElementById("output").innerHTML =
+      `<div class="small">Cleared. Enter text and click <b>Predict NLI Label</b>.</div>`;
+  }
+
+  function labelPill(label) {
+    const cls = label === "entailment" ? "entailment" : (label === "neutral" ? "neutral" : "contradiction");
+    return `<span class="pill ${cls}">${label.toUpperCase()}</span>`;
+  }
+
+  async function doPredict() {
+    const premise = document.getElementById("premise").value.trim();
+    const hypothesis = document.getElementById("hypothesis").value.trim();
+    const out = document.getElementById("output");
+    const btn = document.getElementById("btnPredict");
+
+    if (!premise || !hypothesis) {
+      out.innerHTML = `<div class="small">⚠️ Please fill both <b>Premise</b> and <b>Hypothesis</b>.</div>`;
+      return;
+    }
+
+    btn.disabled = true;
+    out.innerHTML = `<div class="small">Running inference…</div>`;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ premise, hypothesis })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        out.innerHTML = `<div class="small">❌ Server error (${res.status}).</div><pre>${txt}</pre>`;
+        btn.disabled = false;
+        return;
+      }
+
+      const data = await res.json();
+
+      // show required output: NLI label
+      out.innerHTML = `
+        <div><b>Predicted Label:</b> ${labelPill(data.label)}</div>
+
+        <div class="grid">
+          <div class="kv">
+            <b>Cosine Similarity</b>
+            <div>${Number(data.cosine_similarity).toFixed(4)}</div>
+            <div class="small">Higher = more similar embeddings</div>
+          </div>
+
+          <div class="kv">
+            <b>Probabilities</b>
+            <div class="small">
+              entailment: <b>${Number(data.probs.entailment).toFixed(4)}</b><br/>
+              neutral: <b>${Number(data.probs.neutral).toFixed(4)}</b><br/>
+              contradiction: <b>${Number(data.probs.contradiction).toFixed(4)}</b>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <b>Premise:</b> ${escapeHtml(premise)}<br/>
+          <b>Hypothesis:</b> ${escapeHtml(hypothesis)}
+        </div>
+      `;
+    } catch (e) {
+      out.innerHTML = `<div class="small">❌ Failed to call backend. Is uvicorn running?</div><pre>${e}</pre>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // prevent HTML injection from user input
+  function escapeHtml(str) {
+    return str.replaceAll("&","&amp;")
+              .replaceAll("<","&lt;")
+              .replaceAll(">","&gt;")
+              .replaceAll('"',"&quot;")
+              .replaceAll("'","&#039;");
+  }
+</script>
+
+</body>
+</html>
