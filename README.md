@@ -326,4 +326,9 @@ Click **Predict NLI Label**.
 
 ---
 
+### Results 
+<img width="1916" height="713" alt="web_app_image_1" src="https://github.com/user-attachments/assets/1d9ebb6f-abc9-4c56-b18d-45d03bf3c02a" />
+<img width="1117" height="493" alt="web_app_image_2" src="https://github.com/user-attachments/assets/61fb8fd2-afdc-40bd-9f3d-120ac30a17ab" />
+
+
 **End of Assignment A4**
