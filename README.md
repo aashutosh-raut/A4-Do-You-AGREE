@@ -3,7 +3,7 @@
 
 **Course:** AT82.05 Artificial Intelligence: Natural Language Understanding (NLU)  
 **Instructors:** Chaklam Silpasuwanchai, Todsavad Tangtortan  
-**Student:** Ashu  
+**Student:** Ashutosh Raut (st126438)
 
 ---
 
